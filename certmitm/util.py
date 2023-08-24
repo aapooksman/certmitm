@@ -1,15 +1,17 @@
-import OpenSSL
+import os
 import ssl
+import dpkt
 import socket
 import struct
-import os
-import subprocess
-import logging
-import dpkt
 import random
+import OpenSSL
+import logging
+import subprocess
+
 from cryptography.hazmat.primitives import serialization
 
-def SNIFromHello(data):
+
+def SNIFromHello(data: bytes) -> None:
     TLS_HANDSHAKE = 22
     if not data or data[0] != TLS_HANDSHAKE:
         return None
@@ -44,9 +46,10 @@ def SNIFromHello(data):
                 if sni_len + 3 != sni_ext_len:
                     # There are multiple SNIs in one client hello
                     raise NotImplementedError
-                sni = str(sni_ext[5:5+sni_len], 'utf-8')
+                sni = str(sni_ext[5:5 + sni_len], 'utf-8')
                 return sni
     return None
+
 
 def createLogger(name):
     logger = logging.getLogger(name)
@@ -54,7 +57,9 @@ def createLogger(name):
     ch.setLevel(logging.DEBUG)
     ch.setFormatter(LogColorFormatter())
     logger.addHandler(ch)
+
     return logger
+
 
 class LogColorFormatter(logging.Formatter):
     grey = "\x1b[38;20m"
@@ -70,6 +75,7 @@ class LogColorFormatter(logging.Formatter):
         logging.ERROR: red + format + reset,
         logging.CRITICAL: bold_red + format + reset
     }
+
     def format(self, record):
         log_fmt = self.FORMATS.get(record.levelno)
         formatter = logging.Formatter(log_fmt)
@@ -84,6 +90,7 @@ def create_client_context():
     upstream_context.verify = False
     return upstream_context
 
+
 def create_server_context():
     ctx = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
     ctx.set_ciphers('ALL')
@@ -91,8 +98,10 @@ def create_server_context():
     ctx.minimum_version = ssl.TLSVersion.MINIMUM_SUPPORTED
     return ctx
 
-# Deletes a specific extension from a cert
+
 def delete_extension(cert, extension):
+    """ Deletes a specific extension from a cert """
+
     new_cert = OpenSSL.crypto.X509()
     new_cert.set_issuer(cert.get_issuer())
     new_cert.set_notAfter(cert.get_notAfter())
@@ -109,17 +118,19 @@ def delete_extension(cert, extension):
     new_cert.add_extensions(new_extensions)
     return new_cert
 
-# Saves a certificate/key pair and returns the filenames for them
-def save_certificate_chain(certs, key, working_dir, name=None):
+
+def save_certificate_chain(certs, key, working_dir, name: str = None):
+    """ Saves a certificate/key pair and returns the filenames for them """
+
     if not name:
-        name = str(cert.get_subject().commonName)
+        name = str(cert.get_subject().commonName)  # This will actually trigger an error since cert is not defined. Plsfix: @aapo
     directory = os.path.join(working_dir, "certificates")
     if not os.path.isdir(directory):
         os.mkdir(directory)
     for postfix in "_cert", "_key":
         for filetype in ".pem", ".der", ".crt":
-            filename = os.path.join(directory,name+postfix+filetype)
-            with open(filename,"wb") as f:
+            filename = os.path.join(directory, f"{name}{postfix}{filetype}")
+            with open(filename, "wb") as f:
                 if ".pem" in filetype:
                     filetype = OpenSSL.crypto.FILETYPE_PEM
                     if "_cert" in postfix:
@@ -135,15 +146,17 @@ def save_certificate_chain(certs, key, working_dir, name=None):
                     f.write(OpenSSL.crypto.dump_privatekey(filetype, key))
     return pem_cert, pem_key
 
-# Signs a certificate and returns it and its key
+
 def sign_certificate(cert, key=None, issuer_cert=None, issuer_key=None, keytype="RSA", keysize=2048):
+    """ Signs a certificate and returns it and its key """
+
     if not key:
         # Generate RSA/DSA key (Default RSA with 2048 bits)
         key = OpenSSL.crypto.PKey()
         if keytype == "RSA":
-            key.generate_key(OpenSSL.crypto.TYPE_RSA,keysize)
+            key.generate_key(OpenSSL.crypto.TYPE_RSA, keysize)
         elif keytype == "DSA":
-            key.generate_key(OpenSSL.crypto.TYPE_DSA,keysize)
+            key.generate_key(OpenSSL.crypto.TYPE_DSA, keysize)
         else:
             logging.critical("Invalid key type! Key type must be RSA/DSA.")
             exit()
@@ -157,41 +170,51 @@ def sign_certificate(cert, key=None, issuer_cert=None, issuer_key=None, keytype=
 
     # Sign certificate
     if issuer_key is None:
-        cert.sign(key,'sha256')
+        cert.sign(key, 'sha256')
     else:
-        cert.sign(issuer_key,'sha256')
+        cert.sign(issuer_key, 'sha256')
     return cert, key
 
-# Generates a matching keypair for the certificate and replaces the original key
+
 def replace_public_key(cert, key=None, keytype=None, keysize=None):
+    """ Generates a matching keypair for the certificate and replaces the original key """
+
     if key or keytype or keysize:
         raise NotImplementedError
         # Generate RSA/DSA key (Default RSA with 2048 bits)
-        #key = OpenSSL.crypto.PKey()
-        #if keytype == "RSA":
-        #    key.generate_key(OpenSSL.crypto.TYPE_RSA,keysize)
-        #elif keytype == "DSA":
-        #    key.generate_key(OpenSSL.crypto.TYPE_DSA,keysize)
-        #else:
-        #    print("Invalid key type! Key type must be RSA/DSA.")
-        #    exit()
+        # key = OpenSSL.crypto.PKey()
+        # if keytype == "RSA":
+        #     key.generate_key(OpenSSL.crypto.TYPE_RSA,keysize)
+        # elif keytype == "DSA":
+        #     key.generate_key(OpenSSL.crypto.TYPE_DSA,keysize)
+        # else:
+        #     print("Invalid key type! Key type must be RSA/DSA.")
+        #     exit()
     key = OpenSSL.crypto.PKey()
-    key.generate_key(OpenSSL.crypto.TYPE_RSA,2048)
+    key.generate_key(OpenSSL.crypto.TYPE_RSA, 2048)
     cert.set_pubkey(key)
 
     # Sign certificate
-    cert.sign(key,'sha256')
+    cert.sign(key, 'sha256')
     return cert, key
 
-def generate_certificate(version=2, id=None, c=None, st=None, l=None, o=None, cn="certmitm", ca="FALSE", before=-(365*24*60*60), after=(365*24*60*60), keytype="RSA", keysize=2048, name=None, failmessage=None, successmessage=None, valid=None, issuer_cert=None, issuer_key=None, exception=None, dest=None):
-    if not id:
-        id = random.randint(10000000000000000000,99999999999999999999)
+
+def generate_certificate(version=2, cert_id=None, c=None, st=None,
+                         l=None, o=None, cn="certmitm", ca="FALSE",
+                         before=-(365 * 24 * 60 * 60),
+                         after=(365 * 24 * 60 * 60),
+                         keytype="RSA", keysize=2048, name=None,
+                         failmessage=None, successmessage=None,
+                         valid=None, issuer_cert=None,
+                         issuer_key=None, exception=None, dest=None):
+    if not cert_id:
+        cert_id = random.randint(10000000000000000000, 99999999999999999999)
 
     # Create X509 certificate object
     cert = OpenSSL.crypto.X509()
     # Set version and serial number
     cert.set_version(version)
-    cert.set_serial_number(id)
+    cert.set_serial_number(cert_id)
 
     # set certificate subject fields
     subj = cert.get_subject()
@@ -209,26 +232,26 @@ def generate_certificate(version=2, id=None, c=None, st=None, l=None, o=None, cn
     # add certificate extensions
     if ca == "TRUE":
         cert.add_extensions([
-            OpenSSL.crypto.X509Extension(b"basicConstraints","critical",bytes("CA:TRUE","utf-8")),
-    #        OpenSSL.crypto.X509Extension(b"keyUsage",False,b"keyCertSign, cRLSign")
+            OpenSSL.crypto.X509Extension(b"basicConstraints", "critical", bytes("CA:TRUE", "utf-8")),
+            # OpenSSL.crypto.X509Extension(b"keyUsage",False,b"keyCertSign, cRLSign")
         ])
     else:
         cert.add_extensions([
-            OpenSSL.crypto.X509Extension(b"basicConstraints","critical",bytes("CA:FALSE","utf-8")),
-    #        OpenSSL.crypto.X509Extension(b"keyUsage","critical",b"digitalSignature, keyEncipherment")
+            OpenSSL.crypto.X509Extension(b"basicConstraints", "critical", bytes("CA:FALSE", "utf-8")),
+            # OpenSSL.crypto.X509Extension(b"keyUsage","critical",b"digitalSignature, keyEncipherment")
         ])
         if cn:
             cert.add_extensions([
-                OpenSSL.crypto.X509Extension(b"subjectAltName", False, b"DNS:" + bytes(cn, 'utf-8'))
+                OpenSSL.crypto.X509Extension(b"subjectAltName", False, f"DNS:{cn.encode('utf-8')}".encode('utf-8'))
             ])
 
-    #cert.add_extensions([
-    #    OpenSSL.crypto.X509Extension(b"subjectKeyIdentifier", False, b"hash", subject=cert)
-    #])
+    # cert.add_extensions([
+    #     OpenSSL.crypto.X509Extension(b"subjectKeyIdentifier", False, b"hash", subject=cert)
+    # ])
 
-    #cert.add_extensions([
-    #    OpenSSL.crypto.X509Extension(b"authorityKeyIdentifier", False, b"keyid:always", issuer=cert)
-    #])
+    # cert.add_extensions([
+    #     OpenSSL.crypto.X509Extension(b"authorityKeyIdentifier", False, b"keyid:always", issuer=cert)
+    # ])
 
     # set validity time
     cert.gmtime_adj_notBefore(before)
@@ -239,15 +262,20 @@ def generate_certificate(version=2, id=None, c=None, st=None, l=None, o=None, cn
     # Return certificate and key
     return cert, key
 
-# Get the original destination of the intercepted socket.
-def sock_to_dest(sock):
+
+def sock_to_dest(sock: socket.socket) -> tuple:
+    """ Get the original destination of the intercepted socket """
+
     dst = (sock.getsockopt(socket.SOL_IP, 80, 16))
     port, raw_ip = struct.unpack_from("!2xH4s", dst)
     ip = socket.inet_ntop(socket.AF_INET, raw_ip)
-    return  ip, port
+    
+    return ip, port
 
-# Try to get server certificate with OpenSSL
+
 def get_cert_chain(dest_ip, dest_port, req_hostname):
+    """ Try to get server certificate with OpenSSL """
+
     context = OpenSSL.SSL.Context(OpenSSL.SSL.SSLv23_METHOD)
     client = socket.socket()
     client.connect((dest_ip, dest_port))
@@ -259,10 +287,14 @@ def get_cert_chain(dest_ip, dest_port, req_hostname):
     clientSSL.do_handshake()
     return clientSSL.get_peer_cert_chain()
 
-# Try to get server certificate with openssl s_client
-# Needed as get_peer_cert_chain fails if the server wants a client certificate
+
 def get_cert_chain_sclient(dest_ip, dest_port, req_hostname):
-    s_client = subprocess.run(["openssl", "s_client","-host",str(dest_ip),"-port",str(dest_port),"-servername",str(req_hostname),"-showcerts"], input="", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    """
+    Try to get server certificate with openssl s_client
+    Needed as get_peer_cert_chain fails if the server wants a client certificate
+    """
+
+    s_client = subprocess.run(["openssl", "s_client", "-host", str(dest_ip), "-port", str(dest_port), "-servername", str(req_hostname), "-showcerts"], input="", stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     cert_fullchain = []
     for i in s_client.stdout.split(b"-----BEGIN CERTIFICATE-----")[1:]:
@@ -271,6 +303,7 @@ def get_cert_chain_sclient(dest_ip, dest_port, req_hostname):
         cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, cert_string)
         cert_fullchain.append(cert)
     return cert_fullchain
+
 
 def get_server_cert_fullchain(dest_ip, dest_port, req_hostname):
     fullchain = []
@@ -287,4 +320,3 @@ def get_server_cert_fullchain(dest_ip, dest_port, req_hostname):
             fullchain.append(pem_file)
         return fullchain
     return None
-
