@@ -18,13 +18,11 @@ Created by Aapo Oksman - https://github.com/AapoOksman/certmitm - MIT License
 
 Published in DEF CON 31 on August 11 2023
 
-[DEF CON 31 - certmitm: automatic exploitation of TLS certificate validation vulnerabilities - Aapo Oksman](https://info.defcon.org/event/?id=50820)
+[YouTube: DEF CON 31 - certmitm: automatic exploitation of TLS certificate validation vulnerabilities - Aapo Oksman](https://www.youtube.com/watch?v=w_l2q_Gyqfo)
 
 [DEF CON 31 certmitm Slides.pdf](https://media.defcon.org/DEF%20CON%2031/DEF%20CON%2031%20presentations/Aapo%20Oksman%20-%20certmitm%20automatic%20exploitation%20of%20TLS%20certificate%20validation%20vulnerabilities.pdf)
 
 [DEF CON 31 certmitm Demo.mp4](https://media.defcon.org/DEF%20CON%2031/DEF%20CON%2031%20presentations/Aapo%20Oksman%20-%20certmitm%20automatic%20exploitation%20of%20TLS%20certificate%20validation%20vulnerabilities-demo.mp4)
-
-(Presentation recording coming soon)
 
 ## Installation
 
@@ -66,3 +64,21 @@ python3 certmitm.py --listen 9900 --workdir testing --verbose --show-data
 ```
 
 4. Connect clients to the network and start applications. Note that you might need to retry running the applications a couple of times while the tests fail.
+
+## Hall of fame
+
+List of publicly disclosed vulnerabilities found with certmitm. Open an issue if you have found a vulnerability with certmitm and want to be included.
+
+| Author        | Product       | Details     | CVE |
+| ------------- | ------------- | ----------- | --- |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Microsoft Azure Java SDK | [Microsoft advisory](https://msrc.microsoft.com/update-guide/en-US/advisory/CVE-2020-16971) | CVE-2020-16971 |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Microsoft Azure C SDK | [Microsoft advisory](https://msrc.microsoft.com/update-guide/en-US/advisory/CVE-2020-17002) | CVE-2020-17002 |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Disk-o-cloud | [HackerOne report](https://hackerone.com/reports/1026893) |  |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Apple iOS App Store | [Apple security update](https://support.apple.com/en-us/HT212317) | CVE-2021-1837 |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Microsoft Intune | [Microsoft advisory](https://msrc.microsoft.com/update-guide/en-US/advisory/CVE-2021-31980) | CVE-2021-31980 |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Acronis True Image | [Acronis advisory](https://security-advisory.acronis.com/updates/UPD-2103-e974-184f), [HackerOne report](https://hackerone.com/reports/1056144) | CVE-2021-32581 |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Microsoft Windows Authentication | [Microsoft advisory](https://msrc.microsoft.com/update-guide/en-US/advisory/CVE-2022-26913) | CVE-2022-26913 |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Mattermost iOS | [Mattermost advisory MMSA-2023-00220](https://mattermost.com/security-updates/) | CVE-2023-3615 |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Microsoft Windows Enroll Engine | [Microsoft advisory](https://msrc.microsoft.com/update-guide/en-US/advisory/CVE-2023-28226) | CVE-2023-28226 |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Samsung Email for Android | [Samsung advisory SVE-2023-1004](https://security.samsungmobile.com/serviceWeb.smsb) | CVE-2023-30729 |
+| Aapo Oksman [[in]](https://www.linkedin.com/in/AapoOksman/) [[X]](https://twitter.com/AapoOksman)  | Apple Books for iOS, macOS and watchOS | [macOS Sonoma 14 security updates](https://support.apple.com/HT213940), [iOS 17 and iPadOS 17 security updates](https://support.apple.com/HT213938), [watchOS 10 security updates](https://support.apple.com/HT213937) |  |
