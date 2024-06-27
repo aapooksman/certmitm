@@ -65,6 +65,65 @@ python3 certmitm.py --listen 9900 --workdir testing --verbose --show-data
 
 4. Connect clients to the network and start applications. Note that you might need to retry running the applications a couple of times while the tests fail.
 
+You should see any intercepted connections in the output of certmitm as CRITICAL. Additionally, if you run certmitm with the --verbose/-v flag, you will see also properly secured connections as INFO. Below you can see an example where connections to `google.com` are secured properly but connections to `www.google.com` can be intercepted.
+
+```console
+test@certmitm$ python3 certmitm.py -v -l 9900
+INFO - 10.0.0.140: 216.58.211.238:443:google.com for test self_signed = [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:992)
+INFO - 10.0.0.140: 216.58.211.238:443:google.com for test replaced_key = [SSL: TLSV1_ALERT_DECRYPT_ERROR] tlsv1 alert decrypt error (_ssl.c:992)
+INFO - 10.0.0.140: 216.58.211.238:443:google.com for test real_cert_letsencrypt = Nothing received
+INFO - 10.0.0.140: 216.58.211.238:443:google.com for test real_cert_CA_letsencrypt = [SSL: TLSV1_ALERT_UNKNOWN_CA] tlsv1 alert unknown ca (_ssl.c:992)
+CRITICAL - 10.0.0.140: 216.58.209.164:443:www.google.com for test self_signed = data intercepted!
+CRITICAL - 10.0.0.140: 216.58.209.164:443:www.google.com for test replaced_key = data intercepted!
+CRITICAL - 10.0.0.140: 216.58.209.164:443:www.google.com for test real_cert_letsencrypt = data intercepted!
+CRITICAL - 10.0.0.140: 216.58.209.164:443:www.google.com for test real_cert_CA_letsencrypt = data intercepted!
+```
+
+You can also recreate these secure and insecure connections with curl on a Linux machine connected to certmitm. You can also see that curl gives different errors for different certmitm tests.
+
+```console
+test@victim:~$ curl https://google.com
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+test@victim:~$ curl https://google.com
+curl: (35) error:0407008A:rsa routines:RSA_padding_check_PKCS1_type_1:invalid padding
+test@victim:~$ curl https://google.com
+curl: (60) SSL: no alternative certificate subject name matches target host name 'google.com'
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+test@victim:~$ curl https://google.com
+curl: (60) SSL certificate problem: unable to get local issuer certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+test@victim:~$ curl https://google.com
+<HTML><HEAD><meta http-equiv="content-type" content="text/html;charset=utf-8">
+<TITLE>301 Moved</TITLE></HEAD><BODY>
+<H1>301 Moved</H1>
+The document has moved
+<A HREF="https://www.google.com/">here</A>.
+</BODY></HTML>
+test@victim:~$ curl --insecure https://www.google.com
+curl: (52) Empty reply from server
+test@victim:~$ curl --insecure https://www.google.com
+curl: (52) Empty reply from server
+test@victim:~$ curl --insecure https://www.google.com
+curl: (52) Empty reply from server
+test@victim:~$ curl --insecure https://www.google.com
+curl: (52) Empty reply from server
+test@victim:~$ curl --insecure https://www.google.com
+<!doctype html><html itemscope="" itemtype="http://schema.org/WebPage" lang="fi"><head><meta content="text/html;
+```
+
 ## Hall of fame
 
 List of publicly disclosed vulnerabilities found with certmitm. Open an issue if you have found a vulnerability with certmitm and want to be included.
