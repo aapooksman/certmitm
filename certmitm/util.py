@@ -7,6 +7,8 @@ import subprocess
 import logging
 import dpkt
 import random
+import platform
+import re
 from cryptography.hazmat.primitives import serialization
 
 def SNIFromHello(data):
@@ -241,9 +243,15 @@ def generate_certificate(version=2, id=None, c=None, st=None, l=None, o=None, cn
 
 # Get the original destination of the intercepted socket.
 def sock_to_dest(sock):
-    dst = (sock.getsockopt(socket.SOL_IP, 80, 16))
-    port, raw_ip = struct.unpack_from("!2xH4s", dst)
-    ip = socket.inet_ntop(socket.AF_INET, raw_ip)
+    system = platform.system()
+    if system == "Windows":
+        ip, port = sock.getpeername()[:2]
+        ip = re.sub(r"^::ffff:(?=\d+.\d+.\d+.\d+$)", "", ip)
+        ip = ip.split("%", 1)[0]
+    else:
+        dst = (sock.getsockopt(socket.SOL_IP, 80, 16))
+        port, raw_ip = struct.unpack_from("!2xH4s", dst)
+        ip = socket.inet_ntop(socket.AF_INET, raw_ip)
     return  ip, port
 
 # Try to get server certificate with OpenSSL
