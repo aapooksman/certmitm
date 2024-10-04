@@ -11,7 +11,7 @@ import certmitm.util
 import certmitm.certtest
 import certmitm.connection
 
-description = """
+description = r"""
                _             _ _               _                                     
               | |           (_) |             | |                                    
   ___ ___ _ __| |_ _ __ ___  _| |_ _ __ ___   | |__  _   _    __ _  __ _ _ __   ___  
