@@ -1,17 +1,20 @@
 #!/usr/bin/python3
 
-import struct, OpenSSL, re, socket, argparse, os, random, sys, datetime, ssl, shutil, select, copy, time
-
 import os
+import ssl
+import select
+import socket
+import logging
 import _thread
-import tempfile, json
-import logging, threading
+import argparse
+import tempfile
 
 import certmitm.util
 import certmitm.certtest
 import certmitm.connection
 
-description = """
+
+description = r"""
                _             _ _               _                                     
               | |           (_) |             | |                                    
   ___ ___ _ __| |_ _ __ ___  _| |_ _ __ ___   | |__  _   _    __ _  __ _ _ __   ___  
@@ -26,23 +29,27 @@ A tool for testing for certificate validation vulnerabilities of TLS connections
 Created by Aapo Oksman - https://github.com/AapoOksman/certmitm - MIT License
 """
 
+
 # Handle command line flags/arguments
 def handle_args():
     parser = argparse.ArgumentParser(description=description, prog="certmitm.py", formatter_class=argparse.RawTextHelpFormatter)
-    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbosity.', default=False)
-    parser.add_argument('--instant-mitm', action='store_true', help='Forward intercepted data before all tests are completed', default=False)
-    parser.add_argument('--skip-additional-tests', action='store_true', help='Use first successfull test to mitm without trying any others.', default=False)
-    parser.add_argument('-d', '--debug', action='store_true', help='Enable debug verbosity', default=False)
-    #parser.add_argument('--pre-generate', nargs=2, help="Pre-generate server certificates for a specific hostname.", metavar=("HOSTNAME", "DIRECTORY")) #not yet implemented
+
+    parser.add_argument('-l', '--listen', nargs=1, help="Listen for a connection", metavar="PORT", type=int, required=True)
+    parser.add_argument('-v', '--verbose', action='store_true', help='Enable verbosity', default=False)
     parser.add_argument('-w', '--workdir', nargs=1, help='Set the working directory', metavar="DIRECTORY")
-    parser.add_argument('-l', '--listen', nargs=1, help="Listen for a connection", metavar="PORT")
     parser.add_argument('-r', '--retrytests', nargs=1, help="How many times each test is run", default="1")
+    parser.add_argument('-d', '--debug', action='store_true', help='Enable debug verbosity', default=False)
     parser.add_argument('-s', '--show-data', action="store_true", help="Log the intercepted data to console. Trunkates to a sensible length", default=False)
-    parser.add_argument('--show-data-all', action="store_true", help="Log all of the intercepted data to console. Not recommended as large amounts of data will mess up your console.", default=False)
-    #parser.add_argument('--upstream-proxy', nargs=1, help="Upstream proxy for MITM. For example, BURP (127.0.0.1:8080)", metavar="ADDRESS") #not yet implemented
+    parser.add_argument('--instant-mitm', action='store_true', help='Forward intercepted data before all tests are completed', default=False)
+    parser.add_argument('--skip-additional-tests', action='store_true', help='Use first successfull test to mitm without trying any others', default=False)
+    parser.add_argument('--show-data-all', action="store_true", help="Log all of the intercepted data to console. Not recommended as large amounts of data will mess up your console", default=False)
+    # parser.add_argument('--pre-generate', nargs=2, help="Pre-generate server certificates for a specific hostname", metavar=("HOSTNAME", "DIRECTORY"))  # Not yet implemented. Later on this will be a part of a required mutually exclusive group with listen option.
+    # parser.add_argument('--upstream-proxy', nargs=1, help="Upstream proxy for MITM. For example, BURP (127.0.0.1:8080)", metavar="ADDRESS")  # Not yet implemented
+
     return parser.parse_args()
 
-def threaded_connection_handler(downstream_socket):
+
+def threaded_connection_handler(downstream_socket: socket.socket) -> None:
     try:
         global connection_tests
 
@@ -58,7 +65,7 @@ def threaded_connection_handler(downstream_socket):
             logger.debug(f"Can't mitm {connection.identifier}. Forwarding plain tcp")
             try:
                 mitm_connection.set_upstream(connection.upstream_ip, connection.upstream_port)
-            except OSError as e:
+            except OSError:
                 logger.debug(f"Can't connect to {connection.identifier}")
                 return
         else:
@@ -167,7 +174,7 @@ def threaded_connection_handler(downstream_socket):
                         logger.debug(f"sending to client: {from_server}")
                     else:
                         # We should never arrive here
-                        logger.exception(f"Select returned unknown connection")
+                        logger.exception("Select returned unknown connection")
                 else:
                     continue
                 break
@@ -196,7 +203,7 @@ def threaded_connection_handler(downstream_socket):
                 # Close TLS gracefully
                 mitm_connection.downstream_socket.unwrap()
                 mitm_connection.upstream_socket.unwrap()
-            except:
+            except ValueError:  # https://github.com/pypa/ssl/blob/53b55dcb92c03edec70690d3cd9177b4c7f16f7b/ssl/__init__.py#L242
                 pass
             # Close TCP gracefully
             mitm_connection.downstream_socket.close()
@@ -207,20 +214,22 @@ def threaded_connection_handler(downstream_socket):
         # Something really unexpected happened
         logger.exception(e)
 
-def listen_forking(port):
+
+def listen_forking(port: int):
     listener = socket.socket()
     listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    listener.bind(("0.0.0.0", int(port)))
+    listener.bind(("0.0.0.0", port))
     listener.listen(5)
 
     while True:
         try:
             Client, address = listener.accept()
             Client.settimeout(30)
-            logger.debug("Request from: {}".format(address))
+            logger.debug(f"Request from: {address}")
             _thread.start_new_thread(threaded_connection_handler, (Client, ))
         except Exception as e:
-            logger.exception("Error in starting thread: {}".format(e))
+            logger.exception(f"Error in starting thread: {e}")
+
 
 if __name__ == '__main__':
     args = handle_args()
@@ -240,15 +249,6 @@ if __name__ == '__main__':
         working_dir = tempfile.mkdtemp()
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
-
-    if not len(sys.argv) > 1:
-        exitstr = "see "+str(sys.argv[0])+" -h for help"
-        exit(exitstr)
-
-    if len(sys.argv) == 2:
-        if sys.argv[1] == "--verbose" or sys.argv[1] == "-v":
-            exitstr = "see "+str(sys.argv[0])+" -h for help"
-            exit(exitstr)
 
     connection_tests = certmitm.connection.connection_tests(logger, working_dir, args.retrytests[0], args.skip_additional_tests)
 
