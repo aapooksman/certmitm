@@ -65,6 +65,9 @@ def generate_test_context(original_cert_chain_pem, hostname, working_dir, logger
             certcontent = certf.read()
         buffer = ""
         for i in certcontent.split("\n"):
+            # Skip empty lines in certificate files
+            if not i.strip():
+                continue
             if "CERTIFICATE" in i:
                 if buffer:
                     buffer = f"-----BEGIN CERTIFICATE-----\n{buffer}-----END CERTIFICATE-----\n"
