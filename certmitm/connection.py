@@ -25,19 +25,51 @@ class connection(object):
         self.client_name = str(client_socket.getpeername())
         self.client_ip = self.client_name.split("'")[1]
         self.client_port = int(self.client_name.split(" ")[1].split(')')[0]) #Dirty I know :)
-        self.upstream_ip, self.upstream_port = certmitm.util.sock_to_dest(self.client_socket)
-        if self.upstream_ip == "127.0.0.1" and self.upstream_port == 9900:
-            self.logger.debug(f"Setting debug upstream")
-            self.upstream_port = 10000
+        # -- fauxthN: attempting to rewrite the below to work over https and use SNI matching --
+        # self.upstream_ip, self.upstream_port = certmitm.util.sock_to_dest(self.client_socket)
+        # if self.upstream_ip == "127.0.0.1" and self.upstream_port == 9900:
+        #     self.logger.debug(f"Setting debug upstream")
+        #     self.upstream_port = 10000
+        # try:
+        #     self.upstream_sni = certmitm.util.SNIFromHello(self.client_socket.recv(4096, socket.MSG_PEEK))
+        # except (TimeoutError, ConnectionResetError):
+        #     self.upstream_sni = None
+        # if self.upstream_sni:
+        #     self.upstream_name = self.upstream_sni
+        # else:
+        #     self.upstream_name = self.upstream_ip
+        # self.upstream_str = f"{self.upstream_ip}:{self.upstream_port}:{self.upstream_sni}"
+
+        # 1. Try reading ClientHello to get SNI
+        self.logger.debug("Reading TLS ClientHello to get SNI...")
         try:
-            self.upstream_sni = certmitm.util.SNIFromHello(self.client_socket.recv(4096, socket.MSG_PEEK))
-        except (TimeoutError, ConnectionResetError):
+            peeked_data = self.client_socket.recv(4096, socket.MSG_PEEK)
+            self.upstream_sni = certmitm.util.SNIFromHello(peeked_data)
+        except (TimeoutError, ConnectionResetError) as e:
+            self.logger.debug(f"Error while peeking TLS hello: {e}")
             self.upstream_sni = None
+
+        # 2. If SNI found, do DNS lookup to get upstream IP
         if self.upstream_sni:
-            self.upstream_name = self.upstream_sni
+            self.logger.debug(f"SNI found: {self.upstream_sni}, resolving DNS...")
+            try:
+                self.upstream_ip = socket.gethostbyname(self.upstream_sni)
+                self.upstream_port = 443 
+                self.logger.debug(f"Resolved SNI {self.upstream_sni} to {self.upstream_ip}")
+            except socket.gaierror:
+                self.logger.error(f"Could not resolve SNI {self.upstream_sni}, defaulting to 127.0.0.1:443")
+                self.upstream_ip = "127.0.0.1"
+                self.upstream_port = 443
         else:
-            self.upstream_name = self.upstream_ip
+            # no SNI present, fail to default
+            self.upstream_ip = "127.0.0.1"
+            self.upstream_port = 443
+            self.upstream_sni = None
+
+        self.upstream_name = self.upstream_sni if self.upstream_sni else self.upstream_ip
         self.upstream_str = f"{self.upstream_ip}:{self.upstream_port}:{self.upstream_sni}"
+        # -- fauxthN: modifications end --
+
         self.identifier = str([self.client_ip, self.upstream_name, self.upstream_port])
 
     def to_str(self):
