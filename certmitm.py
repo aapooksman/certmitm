@@ -1,14 +1,13 @@
 #!/usr/bin/python3
 
-import struct, OpenSSL, re, socket, argparse, os, random, sys, datetime, ssl, shutil, select, copy, time
+import socket, argparse, sys, ssl, select
 
 import os
 import _thread
-import tempfile, json
-import logging, threading
+import tempfile
+import logging
 
 import certmitm.util
-import certmitm.certtest
 import certmitm.connection
 
 description = r"""
