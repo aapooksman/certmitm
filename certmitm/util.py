@@ -112,6 +112,7 @@ def delete_extension(cert, extension):
 # Saves a certificate/key pair and returns the filenames for them
 def save_certificate_chain(certs, key, working_dir, name=None):
     if not name:
+        # XXX cert is an undefined variable
         name = str(cert.get_subject().commonName)
     directory = os.path.join(working_dir, "certificates")
     if not os.path.isdir(directory):
