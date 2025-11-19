@@ -108,7 +108,7 @@ class test_list(object):
 
     def get_test(self):
         # If the tests have not yet been generated
-        if self.test_list == None:
+        if self.test_list is None:
             with self.lock:
                 if not self.test_list:
                     # Get upstream fullchain from the server
