@@ -27,7 +27,7 @@ class connection(object):
         self.client_port = int(self.client_name.split(" ")[1].split(')')[0]) #Dirty I know :)
         self.upstream_ip, self.upstream_port = certmitm.util.sock_to_dest(self.client_socket)
         if self.upstream_ip == "127.0.0.1" and self.upstream_port == 9900:
-            self.logger.debug(f"Setting debug upstream")
+            self.logger.debug("Setting debug upstream")
             self.upstream_port = 10000
         try:
             self.upstream_sni = certmitm.util.SNIFromHello(self.client_socket.recv(4096, socket.MSG_PEEK))
@@ -176,28 +176,28 @@ class mitm_connection(object):
         self.downstream_tls_buf = b""
 
     def set_upstream(self, ip, port):
-        self.logger.debug(f"connecting to TCP upstream")
+        self.logger.debug("connecting to TCP upstream")
         self.upstream_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.upstream_socket.settimeout(10)
         try:
             self.upstream_socket.connect((ip, port))
             self.upstream_tls = False
-            self.logger.debug(f"connected to TCP upstream")
+            self.logger.debug("connected to TCP upstream")
         except (ConnectionRefusedError, TimeoutError, OSError) as e:
             self.logger.debug(f"Upstream connection failed with {e}")
             self.upstream_socket = None
 
     def wrap_downstream(self, context):
-        self.logger.debug(f"Wrapping downstream with TLS")
+        self.logger.debug("Wrapping downstream with TLS")
         self.downstream_socket = context.wrap_socket(self.downstream_socket, server_side=True)
         self.downstream_socket.settimeout(10)
         self.downstream_tls = True
-        self.logger.debug(f"Wrapped downstream with TLS")
+        self.logger.debug("Wrapped downstream with TLS")
 
     def wrap_upstream(self, hostname):
-        self.logger.debug(f"Wrapping upstream with TLS")
+        self.logger.debug("Wrapping upstream with TLS")
         self.upstream_context = certmitm.util.create_client_context()
         self.upstream_socket = self.upstream_context.wrap_socket(self.upstream_socket, server_hostname=hostname)
         self.upstream_socket.settimeout(10)
         self.upstream_tls = True
-        self.logger.debug(f"Wrapped upstream with TLS")
+        self.logger.debug("Wrapped upstream with TLS")

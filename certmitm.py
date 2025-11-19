@@ -166,7 +166,7 @@ def threaded_connection_handler(downstream_socket):
                         logger.debug(f"sending to client: {from_server}")
                     else:
                         # We should never arrive here
-                        logger.exception(f"Select returned unknown connection")
+                        logger.exception("Select returned unknown connection")
                 else:
                     continue
                 break

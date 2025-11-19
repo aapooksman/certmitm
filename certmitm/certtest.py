@@ -29,7 +29,7 @@ def generate_test_context(original_cert_chain_pem, hostname, working_dir, logger
     for tmp_cert_pem in original_cert_chain_pem:
         cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, tmp_cert_pem)
         tmp_cert_chain.append(cert)
-    name = f"self_signed"
+    name = "self_signed"
     tmp_cert_chain[0].set_issuer(tmp_cert_chain[0].get_subject())
     tmp_cert_chain[0], key = certmitm.util.sign_certificate(tmp_cert_chain[0], issuer_cert=None)
     certfile, keyfile = certmitm.util.save_certificate_chain([tmp_cert_chain[0]], key, working_dir, name=hostname+"_"+name)
@@ -40,7 +40,7 @@ def generate_test_context(original_cert_chain_pem, hostname, working_dir, logger
     for tmp_cert_pem in original_cert_chain_pem:
         cert = OpenSSL.crypto.load_certificate(OpenSSL.crypto.FILETYPE_PEM, tmp_cert_pem)
         tmp_cert_chain.append(cert)
-    name = f"replaced_key"
+    name = "replaced_key"
     tmp_cert_chain[0], key = certmitm.util.replace_public_key(tmp_cert_chain[0])
     certfile, keyfile = certmitm.util.save_certificate_chain(tmp_cert_chain, key, working_dir, name=hostname+"_"+name)
     yield certtest(name, hostname, certfile, keyfile, original_cert_chain_pem)
