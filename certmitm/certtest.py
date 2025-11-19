@@ -1,8 +1,6 @@
 import OpenSSL
-import ssl
 import os
 import certmitm.util
-import copy
 
 class certtest(object):
 
