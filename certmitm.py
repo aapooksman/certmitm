@@ -195,7 +195,7 @@ def threaded_connection_handler(downstream_socket):
                 # Close TLS gracefully
                 mitm_connection.downstream_socket.unwrap()
                 mitm_connection.upstream_socket.unwrap()
-            except:
+            except Exception:
                 pass
             # Close TCP gracefully
             mitm_connection.downstream_socket.close()
