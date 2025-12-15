@@ -124,6 +124,12 @@ test@victim:~$ curl --insecure https://www.google.com
 <!doctype html><html itemscope="" itemtype="http://schema.org/WebPage" lang="fi"><head><meta content="text/html;
 ```
 
+To log TLS session secrets for successfully intercepted TLS connections, you can set the SSLKEYLOGFILE environment variable. This file can then be used to decrypt the captured TLS traffic in tools such as Wireshark (_Edit → Preferences → Protocols → TLS → (Pre)-Master-Secret log filename_). 
+
+```
+SSLKEYLOGFILE=sslkeylogfile.txt python3 certmitm.py --listen 9900 --workdir testing --verbose
+```
+
 ## Hall of fame
 
 List of publicly disclosed vulnerabilities found with certmitm. Open an issue if you have found a vulnerability with certmitm and want to be included.
