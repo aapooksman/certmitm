@@ -49,7 +49,16 @@ def threaded_connection_handler(downstream_socket):
         # Lets start by initializing a mitm_connection object with the client connection
         mitm_connection = certmitm.connection.mitm_connection(downstream_socket, logger)
         connection = certmitm.connection.connection(mitm_connection.downstream_socket, logger)
-        logger.debug(f"got connection: {connection.to_str()}")
+
+        targets: list[str] = ["google.com", "googleapis.com", "facebook.com", "map.baidu.com", "weather.com"]
+        patterns: tuple[str, ...] = tuple(
+            candidate for item in targets for candidate in (item, f".{item}")
+        )
+        if connection.upstream_sni.endswith(patterns):
+#            logger.debug(f"{connection.client_ip}: {connection.upstream_str} skipped")
+            return
+        else:
+            logger.debug(f"got connection: {connection.to_str()}")
 
         # Lets get a test for the client
         test = connection_tests.get_test(connection)
@@ -249,6 +258,9 @@ if __name__ == '__main__':
         if sys.argv[1] == "--verbose" or sys.argv[1] == "-v":
             exitstr = "see "+str(sys.argv[0])+" -h for help"
             exit(exitstr)
+
+    if args.verbose:
+        print(args)
 
     connection_tests = certmitm.connection.connection_tests(logger, working_dir, args.retrytests[0], args.skip_additional_tests)
 
